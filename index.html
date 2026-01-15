@@ -1576,7 +1576,7 @@ const BundleModal = ({ isOpen, onClose, url, onImportToCanvas, triggerToast }) =
                     return;
                 }
 
-                // 2) NEW: Data transfer (build a sharp SVG card -> import as image)
+                // 2) NEW: Data transfer -> echtes HTML (scharf) in Canva 1
                 if (d.type === 'BUNDLE_DATA_TRANSFER') {
                     const esc = (s) => String(s ?? '')
                         .replace(/&/g, '&amp;')
@@ -1584,36 +1584,146 @@ const BundleModal = ({ isOpen, onClose, url, onImportToCanvas, triggerToast }) =
                         .replace(/>/g, '&gt;')
                         .replace(/"/g, '&quot;');
 
-                    const bezeichnung = esc(d.bezeichnung || 'Bundle');
-                    const artikelName = esc(d.artikelName || 'Produkt');
+                    const titel = esc(d.titel || d.bezeichnung || 'Bundle Angebot');
+                    const tarifName = esc(d.tarifName || d.artikelName || '');
                     const preis = esc(d.preis || '0,00 €');
+                    const validUntil = esc(d.validUntil || '');
                     const detailsHTML = (d.detailsHTML || '');
-                    const bildUrl = (d.bildUrl || '');
 
-                    const imgPart = bildUrl
-                        ? `<img src="${esc(bildUrl)}" style="width:120px;height:auto;object-fit:contain;display:block;" />`
-                        : '';
+                    const badges = Array.isArray(d.badges) ? d.badges.slice(0, 6).map(esc) : [];
+                    const images = Array.isArray(d.images) ? d.images.slice(0, 2).map(esc) : (d.bildUrl ? [esc(d.bildUrl)] : []);
 
-                    const svg = `<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="360" viewBox="0 0 1100 360">
-  <foreignObject x="0" y="0" width="1100" height="360">
-    <div xmlns="http://www.w3.org/1999/xhtml" style="display:flex;align-items:center;gap:20px;background:white;padding:22px;border-radius:18px;border:2px solid #000033;color:#1e293b;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;">
-      ${imgPart}
-      <div style="min-width:0;">
-        <div style="color:#2563eb;font-weight:800;font-size:12px;text-transform:uppercase;letter-spacing:0.06em;">${bezeichnung}</div>
-        <div style="font-size:22px;font-weight:900;margin:6px 0 4px 0;line-height:1.1;">${artikelName}</div>
-        <div style="font-size:28px;font-weight:1000;color:#000033;line-height:1.0;">${preis}</div>
-        <div style="font-size:12px;margin-top:12px;opacity:0.85;line-height:1.25;">${detailsHTML}</div>
-      </div>
-    </div>
-  </foreignObject>
-</svg>`;
+                    const badgesHTML = badges.map(b => `
+                        <span style="
+                            display:inline-flex;align-items:center;gap:6px;
+                            padding:6px 10px;border-radius:999px;
+                            background:#e7f2ff;color:#0b4aa2;
+                            font-size:12px;font-weight:800;
+                            border:1px solid #cfe5ff;
+                        ">${b}</span>
+                    `).join('');
 
-                    const svgDataUrl = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+                    const imagesHTML = images.map(src => `
+                        <div style="
+                            background:#fff;border-radius:10px;
+                            border:1px solid #e5e7eb;
+                            padding:10px;
+                            width:220px;height:220px;
+                            display:flex;align-items:center;justify-content:center;
+                        ">
+                          <img src="${src}" style="max-width:100%;max-height:100%;object-fit:contain;display:block;" />
+                        </div>
+                    `).join('');
+
+                    // ✅ 1:1 Card-Optik (wie Bundle-Seite) + Fix fürs „Händchen“ (pointer-events:none)
+                    const highResHTML = `
+                      <div style="
+                        width:920px; max-width:920px;
+                        background:#fff; border-radius:18px;
+                        border:2px solid #0b1e42;
+                        overflow:hidden;
+                        font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+                        pointer-events:none; user-select:none;
+                      ">
+                        <!-- Header -->
+                        <div style="
+                          background:#173a7a;
+                          color:#fff;
+                          padding:14px 18px;
+                          display:flex;
+                          align-items:center;
+                          justify-content:space-between;
+                          gap:14px;
+                        ">
+                          <div style="display:flex;align-items:center;gap:10px;min-width:0;">
+                            <span style="
+                              width:28px;height:28px;
+                              border-radius:8px;
+                              background:rgba(255,255,255,.14);
+                              display:flex;align-items:center;justify-content:center;
+                              font-weight:900;
+                            ">📦</span>
+                            <div style="
+                              font-size:22px;
+                              font-weight:1000;
+                              white-space:nowrap;
+                              overflow:hidden;
+                              text-overflow:ellipsis;
+                              max-width:690px;
+                            ">${titel}</div>
+                          </div>
+
+                          ${validUntil ? `
+                            <div style="
+                              padding:6px 10px;
+                              border-radius:10px;
+                              background:rgba(255,255,255,.12);
+                              border:1px solid rgba(255,255,255,.22);
+                              font-weight:800;
+                              font-size:12px;
+                              white-space:nowrap;
+                            ">Bis: ${validUntil}</div>
+                          ` : ``}
+                        </div>
+
+                        <!-- Content -->
+                        <div style="padding:18px 18px 16px 18px;">
+                          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:18px;">
+                            <div style="flex:1;min-width:0;">
+                              ${tarifName ? `<div style="font-size:22px;font-weight:1000;color:#0b1e42;">${tarifName}</div>` : ``}
+                              ${badges.length ? `<div style="margin-top:10px;display:flex;gap:10px;flex-wrap:wrap;">${badgesHTML}</div>` : ``}
+                            </div>
+
+                            <div style="
+                              width:170px;flex:0 0 170px;
+                              background:#dc2626;
+                              border-radius:12px;
+                              color:#fff;
+                              padding:12px 14px;
+                              box-shadow:0 8px 20px rgba(0,0,0,.10);
+                              text-align:center;
+                            ">
+                              <div style="font-size:11px;font-weight:900;opacity:.95;letter-spacing:.06em;">PREIS</div>
+                              <div style="font-size:30px;font-weight:1100;line-height:1.1;margin-top:6px;">${preis}</div>
+                            </div>
+                          </div>
+
+                          <!-- Images -->
+                          ${images.length ? `
+                            <div style="
+                              margin-top:16px;
+                              display:flex;
+                              justify-content:center;
+                              gap:18px;
+                              flex-wrap:wrap;
+                            ">${imagesHTML}</div>
+                          ` : ``}
+
+                          <!-- Details -->
+                          ${detailsHTML ? `
+                            <div style="
+                              margin-top:18px;
+                              border-radius:14px;
+                              border:1px solid #e5e7eb;
+                              background:#f8fafc;
+                              padding:14px 16px;
+                            ">
+                              <div style="
+                                border-left:4px solid #2563eb;
+                                padding-left:12px;
+                                color:#0f172a;
+                                font-size:14px;
+                                line-height:1.35;
+                              ">${detailsHTML}</div>
+                            </div>
+                          ` : ``}
+                        </div>
+                      </div>
+                    `;
 
                     gotAutoImportRef.current = true;
-                    if (typeof onImportToCanvas === 'function') onImportToCanvas(svgDataUrl);
-                    if (typeof triggerToast === 'function') triggerToast('Bundle-Daten (scharf) in Canva 1 übernommen.');
+                    if (typeof onImportToCanvas === 'function') onImportToCanvas({ kind: 'html', html: highResHTML });
+                    if (typeof triggerToast === 'function') triggerToast('Bundle-Daten (HTML) in Canva 1 übernommen.');
                     setIsWorking(false);
                     return;
                 }
@@ -2071,7 +2181,7 @@ const resolveUserName = (raw) => {
                         </div>
                     ) : null}
 
-</div><div className="canvas-lines"></div>{image && (<div className="absolute inset-0 z-20" onPointerDown={isPenMode ? handleInteractionStart : undefined} onPointerMove={isPenMode ? handleInteractionMove : undefined} onPointerUp={isPenMode ? handleInteractionEnd : undefined} onPointerCancel={isPenMode ? handleInteractionEnd : undefined} onPointerLeave={isPenMode ? handleInteractionEnd : undefined} style={{ transform: `translate(${x}px, ${y}px)`, transition: 'none', cursor: isPenMode ? (interactionStateRef.current.mode === 'drag' ? 'grabbing' : interactionStateRef.current.mode === 'scale' ? 'crosshair' : 'grab') : 'default', pointerEvents: isPenMode ? 'auto' : 'none', touchAction: 'none' }}><img src={image} alt={`Eingefügtes Bild für ${label}`} className="canvas-image" style={{ transform: `scale(${scale}) rotate(${rotation}deg)`, transition: 'none', pointerEvents: 'none', opacity: 1 }}/></div>)}<div className="relative flex-1 w-full h-full min-h-[100px] overflow-hidden"><textarea value={textValue || ''} onChange={(e) => handleTextChange(statusKey, e.target.value)} className={getOfferTextClasses()} placeholder={inputMode === 'keyboard' ? 'Details digital eingeben...' : ''} readOnly={inputMode === 'pen'} /><canvas ref={canvasRef} onPointerDown={(e) => startDrawing(e, canvasRef, statusKey)} onPointerMove={(e) => draw(e, canvasRef, statusKey)} onPointerUp={(e) => stopDrawing(e, canvasRef)} onPointerLeave={(e) => stopDrawing(e, canvasRef)} className="w-full h-full drawing-canvas absolute inset-0" style={{pointerEvents: inputMode === 'pen' ? 'auto' : 'none', touchAction: 'none'}}/></div></div>); });
+</div><div className="canvas-lines"></div>{(image || (statusKey === 'offer1' && window.__canvasHtmlOffer1)) && (<div className="absolute inset-0 z-20" onPointerDown={isPenMode ? handleInteractionStart : undefined} onPointerMove={isPenMode ? handleInteractionMove : undefined} onPointerUp={isPenMode ? handleInteractionEnd : undefined} onPointerCancel={isPenMode ? handleInteractionEnd : undefined} onPointerLeave={isPenMode ? handleInteractionEnd : undefined} style={{ transform: `translate(${x}px, ${y}px)`, transition: 'none', cursor: isPenMode ? (interactionStateRef.current.mode === 'drag' ? 'grabbing' : interactionStateRef.current.mode === 'scale' ? 'crosshair' : 'grab') : 'default', pointerEvents: isPenMode ? 'auto' : 'none', touchAction: 'none' }}>{(statusKey === 'offer1' && window.__canvasHtmlOffer1) ? (<div style={{ transform: `scale(${scale}) rotate(${rotation}deg)`, transformOrigin: 'top left', pointerEvents: 'none', userSelect: 'none' }} dangerouslySetInnerHTML={{ __html: window.__canvasHtmlOffer1 }} />) : (<img src={image} alt={`Eingefügtes Bild für ${label}`} className="canvas-image" style={{ transform: `scale(${scale}) rotate(${rotation}deg)`, transition: 'none', pointerEvents: 'none', opacity: 1 }}/>)}</div>)}<div className="relative flex-1 w-full h-full min-h-[100px] overflow-hidden"><textarea value={textValue || ''} onChange={(e) => handleTextChange(statusKey, e.target.value)} className={getOfferTextClasses()} placeholder={inputMode === 'keyboard' ? 'Details digital eingeben...' : ''} readOnly={inputMode === 'pen'} /><canvas ref={canvasRef} onPointerDown={(e) => startDrawing(e, canvasRef, statusKey)} onPointerMove={(e) => draw(e, canvasRef, statusKey)} onPointerUp={(e) => stopDrawing(e, canvasRef)} onPointerLeave={(e) => stopDrawing(e, canvasRef)} className="w-full h-full drawing-canvas absolute inset-0" style={{pointerEvents: inputMode === 'pen' ? 'auto' : 'none', touchAction: 'none'}}/></div></div>); });
         
         // --- SMALL INPUT CANVAS (Patched with drawing-canvas class) ---
         
@@ -2463,6 +2573,13 @@ const fileInputRef = useRef(null);
             const [toastMessage, setToastMessage] = useState(null); 
             const toastTimerRef = useRef(null);
             const [canvasImages, setCanvasImages] = useState({ offer1: null, offer2: null, offer3: null });
+            const [canvasHtml, setCanvasHtml] = React.useState({ offer1: null, offer2: null, offer3: null });
+
+            // Brücke für die OfferCanvas-Komponente (minimal-invasiv)
+            React.useEffect(() => {
+                window.__canvasHtmlOffer1 = canvasHtml.offer1 || null;
+            }, [canvasHtml.offer1]);
+
             const [isImageSelectModalOpen, setIsImageSelectModalOpen] = useState(false);
             const [currentImagePayload, setCurrentImagePayload] = useState(null);
             
@@ -2472,14 +2589,28 @@ const fileInputRef = useRef(null);
 
             const triggerToast = (message) => { clearTimeout(toastTimerRef.current); setToastMessage(message); toastTimerRef.current = setTimeout(() => setToastMessage(null), 3000); };
 
-            // ===== Bundle -> Canva 1 (Screenshot/Bild) =====
-            const importBundleToCanva1 = useCallback((dataUrl) => {
-                if (!dataUrl) return;
-                setCanvasImages(prev => ({ ...prev, offer1: dataUrl }));
-                setImageTransform(prev => ({ ...prev, offer1: { x: 0, y: 0, scale: 1.0, rotation: 0 } }));
-                triggerToast('Bundle in Canva 1 übernommen.');
-                // Optional: Modal schließen
-                setShowBundleModal(false);
+            // ===== Bundle -> Canva 1 (HTML bevorzugt, Fallback Bild) =====
+            const importBundleToCanva1 = React.useCallback((payload) => {
+                if (!payload) return;
+
+                // 1) HTML-Import (Scharf)
+                if (typeof payload === 'object' && payload.kind === 'html') {
+                    setCanvasHtml(prev => ({ ...prev, offer1: payload.html || null }));
+                    setCanvasImages(prev => ({ ...prev, offer1: null })); // Bild leeren
+                    setImageTransform(prev => ({ ...prev, offer1: { x: 0, y: 0, scale: 1.0, rotation: 0 } }));
+                    triggerToast('Bundle (HTML – scharf) eingefügt.');
+                    setShowBundleModal(false);
+                    return;
+                }
+
+                // 2) Fallback: Bild-Import
+                if (typeof payload === 'string') {
+                    setCanvasImages(prev => ({ ...prev, offer1: payload }));
+                    setCanvasHtml(prev => ({ ...prev, offer1: null }));
+                    setImageTransform(prev => ({ ...prev, offer1: { x: 0, y: 0, scale: 1.0, rotation: 0 } }));
+                    triggerToast('Bundle (Bild) eingefügt.');
+                    setShowBundleModal(false);
+                }
             }, [triggerToast]);
 
 
@@ -3977,4 +4108,3 @@ const handlePDFShare = async () => {
     </script>
 </body>
 </html>
-
