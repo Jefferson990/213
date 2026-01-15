@@ -1620,7 +1620,7 @@ const BundleModal = ({ isOpen, onClose, url, onImportToCanvas, triggerToast }) =
             } catch (err) {
                 console.warn('BundleModal message handler failed', err);
             }
-        };};
+        };
 
         window.addEventListener('message', handler);
         return () => window.removeEventListener('message', handler);
